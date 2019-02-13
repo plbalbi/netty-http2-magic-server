@@ -59,6 +59,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<HttpRequ
             ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
         } else {
             response.headers().set(CONNECTION, KEEP_ALIVE);
+            ctx.write(response);
         }
 
     }

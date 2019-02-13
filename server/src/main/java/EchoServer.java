@@ -35,6 +35,8 @@ public class EchoServer {
   private static final boolean SSL = System.getProperty("ssl") != null;
 
   private static final int PORT = Integer.parseInt(System.getProperty("port", SSL ? "8443" : "8080"));
+  private EventLoopGroup eventLoopGroup;
+  private ChannelFuture serverChannelFuture;
 
   public EchoServer(int port) {
     this.port = port;
@@ -67,29 +69,48 @@ public class EchoServer {
     return sslContext;
   }
 
-  public void start() throws InterruptedException, CertificateException, SSLException {
+  public void start() throws InterruptedException, SSLException, CertificateException {
+    start(true);
+  }
+
+  public void start(boolean block) throws InterruptedException, CertificateException, SSLException {
     final SslContext sslContext = configureSslContext();
 
-    EventLoopGroup group = new NioEventLoopGroup();
+    eventLoopGroup = new NioEventLoopGroup();
     try {
       ServerBootstrap bootstrap = new ServerBootstrap();
 
       bootstrap
-          .group(group)
+          .group(eventLoopGroup)
           .option(ChannelOption.SO_BACKLOG, 1024)
           .channel(NioServerSocketChannel.class)
           .localAddress(new InetSocketAddress(port))
           .handler(new LoggingHandler(LogLevel.INFO))
           .childHandler(new Http2ServerInitializer(sslContext));
 
-      ChannelFuture future = bootstrap.bind().sync();
+      serverChannelFuture = bootstrap.bind().sync();
 
       System.out.println("Server connected on localhost:" + port);
 
-      future.channel().closeFuture().sync();
+      if (block) {
+        serverChannelFuture.channel().closeFuture().sync();
+      }
+
     } finally {
-      group.shutdownGracefully().sync();
+      eventLoopGroup.shutdownGracefully().sync();
     }
+  }
+
+  public void shutdown() {
+    eventLoopGroup.shutdownGracefully();
+    try {
+      serverChannelFuture.channel().closeFuture().sync();
+    }
+    catch (InterruptedException e)
+    {
+      e.printStackTrace();
+    }
+
   }
 
 }

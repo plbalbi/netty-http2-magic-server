@@ -1,3 +1,5 @@
+package handlers;
+
 import static io.netty.handler.ssl.ApplicationProtocolNames.HTTP_1_1;
 import static io.netty.handler.ssl.ApplicationProtocolNames.HTTP_2;
 
